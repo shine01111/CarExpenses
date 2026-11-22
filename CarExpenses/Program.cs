@@ -2,28 +2,31 @@
 
 Console.OutputEncoding = System.Text.Encoding.UTF8;
 
-var expenses = new List<CarExpense>
-{
-    new FuelExpense(new DateOnly(2026, 10, 15), 2250.00m, 124500, "Заправка на трасі", 40.0, "А-95 Євро"),
-    new MaintenanceExpense(new DateOnly(2026, 10, 22), 3400.00m, 124850, "Заміна мастила та фільтрів", "АвтоСервіс Плюс", 10000),
-    new FineExpense(new DateOnly(2026, 11, 03), 340.00m, 125120, "Паркування у забороненому місці", "122 ч.1 КУпАП", true),
-    new FuelExpense(new DateOnly(2026, 11, 18), 1980.50m, 125600, "Заправка у місті", 35.0, "А-95 Pulls"),
-    new MaintenanceExpense(new DateOnly(2026, 11, 21), 1650.00m, 125750, "Діагностика ходової частини", "Bosch Car Service", 5000)
-};
+var tracker = new ExpenseTracker(new MemoryExpenseSource(), new SortByDate());
 
-Console.WriteLine("=== Облік витрат на автомобіль (поліморфний список) ===\n");
-
-foreach (var expense in expenses)
+Console.WriteLine($"=== Сортування: {tracker.Sorter.Title} ===\n");
+foreach (var item in tracker.GetSortedExpenses())
 {
-    Console.WriteLine(expense);
+    Console.WriteLine(item);
 }
 
-var summary = ExpenseSummary.FromExpenses(expenses);
+tracker.Sorter = new SortByAmountDesc();
+Console.WriteLine($"\n=== Сортування: {tracker.Sorter.Title} ===\n");
+foreach (var item in tracker.GetSortedExpenses())
+{
+    Console.WriteLine(item);
+}
 
-Console.WriteLine("\n=== Зведена статистика (структура ExpenseSummary) ===");
-Console.WriteLine($"Всього записів: {summary.TotalCount}");
-Console.WriteLine($"Загальна сума витрат: {summary.TotalAmount:F2} грн");
-Console.WriteLine($"Середній чек: {summary.AverageExpense:F2} грн");
-Console.WriteLine($"  • Заправки: {summary.FuelTotal:F2} грн (всього {summary.TotalLiters:F1} л)");
-Console.WriteLine($"  • Обслуговування: {summary.MaintenanceTotal:F2} грн");
-Console.WriteLine($"  • Штрафи: {summary.FineTotal:F2} грн");
+Console.WriteLine("\n=== Перевірка валідації ===");
+try
+{
+    var invalidExpense = new FuelExpense(new DateOnly(2026, 11, 22), -500m, 125800, "Помилковий чек", 10, "А-95");
+    tracker.AddExpense(invalidExpense);
+}
+catch (ArgumentException ex)
+{
+    Console.WriteLine($"Перехоплено помилку введення: {ex.Message}");
+}
+
+var summary = tracker.GetSummary();
+Console.WriteLine($"\nРазом: {summary.TotalCount} записів на суму {summary.TotalAmount:F2} грн (середній чек: {summary.AverageExpense:F2} грн).");
